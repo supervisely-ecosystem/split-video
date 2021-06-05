@@ -25,7 +25,7 @@ if video_splitter == time_split:
     SPLIT_SEC = int(os.environ['modal.state.timeStep'])
     SPLIT_FRAMES = None
 else:
-    SPLIT_FRAMES = os.environ['modal.state.framesStep']
+    SPLIT_FRAMES = int(os.environ['modal.state.framesStep'])
 
 
 def get_splitter(split_sec, video_length):
