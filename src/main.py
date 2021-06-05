@@ -12,7 +12,7 @@ my_app = sly.AppService()
 TEAM_ID = int(os.environ['context.teamId'])
 WORKSPACE_ID = int(os.environ['context.workspaceId'])
 PROJECT_ID = int(os.environ['modal.state.slyProjectId'])
-#SPLIT_SEC = int(os.environ['modal.state.split_sec'])
+SPLIT_SEC = int(os.environ['modal.state.split_sec'])
 TASK_ID = int(os.environ["TASK_ID"])
 
 RESULT_DIR_NAME = 'split_videos'
@@ -24,22 +24,28 @@ video_splitter = os.environ['modal.state.videoSplitter']
 
 if video_splitter == time_split:
    SPLIT_SEC = os.environ['modal.state.timeStep']
-
 else:
     SPLIT_FRAMES = os.environ['modal.state.framesStep']
-
-logger.warn('SPLIT_SEC {}'.format(SPLIT_SEC))
-logger.warn('SPLIT_FRAMES {}'.format(SPLIT_FRAMES))
-a = 5 / 0
 
 
 def get_splitter(split_sec, video_length):
     splitter = []
-    for split_step in range(0, int(video_length) + 1, split_sec):
-        if split_step + split_sec > video_length:
-            splitter.append([split_step, video_length])
-            break
-        splitter.append([split_step, split_step + split_sec])
+    full_parts = int(video_length // split_sec)
+    start_time = 0
+    for i in range(full_parts):
+        end_time = split_sec * (i+1)
+        splitter.append([start_time, end_time])
+        start_time = end_time
+
+    if splitter[-1][-1] < video_length:
+        splitter.append([splitter[-1][-1], video_length])
+
+    #splitter = []
+    #for split_step in range(0, int(video_length) + 1, int(split_sec)):
+    #    if split_step + split_sec > video_length:
+    #        splitter.append([split_step, video_length])
+    #        break
+    #    splitter.append([split_step, split_step + split_sec])
 
     return splitter
 
@@ -116,6 +122,10 @@ def split_video(api: sly.Api, task_id, context, state, app_logger):
 
                 ann_frames = [frame for frame in ann.frames]
                 video_length = video_info.frames_to_timecodes[-1]
+
+                if SPLIT_FRAMES:
+                    SPLIT_SEC = video_length * SPLIT_FRAMES / video_info.frames_count
+
                 if SPLIT_SEC >= video_length:
                     logger.warn('SPLIT_SEC is more then video {} length'.format(video_info.name))
                     new_video_info = api.video.upload_hash(ds.id, video_info.name, video_info.hash)
