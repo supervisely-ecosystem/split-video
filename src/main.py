@@ -40,13 +40,6 @@ def get_splitter(split_sec, video_length):
     if splitter[-1][-1] < video_length:
         splitter.append([splitter[-1][-1], video_length])
 
-    #splitter = []
-    #for split_step in range(0, int(video_length) + 1, int(split_sec)):
-    #    if split_step + split_sec > video_length:
-    #        splitter.append([split_step, video_length])
-    #        break
-    #    splitter.append([split_step, split_step + split_sec])
-
     return splitter
 
 
