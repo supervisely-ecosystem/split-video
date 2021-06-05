@@ -11,7 +11,7 @@ my_app = sly.AppService()
 
 TEAM_ID = int(os.environ['context.teamId'])
 WORKSPACE_ID = int(os.environ['context.workspaceId'])
-#PROJECT_ID = int(os.environ['modal.state.slyProjectId'])
+PROJECT_ID = int(os.environ['modal.state.slyProjectId'])
 #SPLIT_SEC = int(os.environ['modal.state.split_sec'])
 SPLIT_SEC = 4
 TASK_ID = int(os.environ["TASK_ID"])
