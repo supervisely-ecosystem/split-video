@@ -6,7 +6,6 @@ from supervisely_lib.video_annotation.key_id_map import KeyIdMap
 from copy import deepcopy
 from supervisely_lib.video_annotation.video_tag_collection import VideoTagCollection
 
-
 my_app = sly.AppService()
 
 TEAM_ID = int(os.environ['context.teamId'])
@@ -23,7 +22,8 @@ time_split = 'time'
 video_splitter = os.environ['modal.state.videoSplitter']
 
 if video_splitter == time_split:
-   SPLIT_SEC = os.environ['modal.state.timeStep']
+    SPLIT_SEC = os.environ['modal.state.timeStep']
+    SPLIT_FRAMES = None
 else:
     SPLIT_FRAMES = os.environ['modal.state.framesStep']
 
