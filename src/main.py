@@ -126,6 +126,7 @@ def split_video(api: sly.Api, task_id, context, state, app_logger):
 
                 if SPLIT_FRAMES:
                     SPLIT_SEC = video_length * SPLIT_FRAMES / video_info.frames_count
+                    logger.warn('SPLIT_FRAMES {}, SPLIT_SEC {}'.format(SPLIT_FRAMES, SPLIT_SEC))
 
                 if SPLIT_SEC >= video_length:
                     logger.warn('SPLIT_SEC is more then video {} length'.format(video_info.name))
