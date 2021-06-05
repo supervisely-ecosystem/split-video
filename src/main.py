@@ -22,7 +22,7 @@ time_split = 'time'
 video_splitter = os.environ['modal.state.videoSplitter']
 
 if video_splitter == time_split:
-    SPLIT_SEC = os.environ['modal.state.timeStep']
+    SPLIT_SEC = int(os.environ['modal.state.timeStep'])
     SPLIT_FRAMES = None
 else:
     SPLIT_FRAMES = os.environ['modal.state.framesStep']
