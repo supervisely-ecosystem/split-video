@@ -1,0 +1,21 @@
+<sly-field
+          title="Split videos by:">
+    <el-tabs type="border-card" class="el-tabs-cards" v-model="state.videoSplitter">
+        <el-tab-pane name="time">
+            <el-radio slot="label" v-model="state.videoSplitter" label="time">
+                Time
+            </el-radio>
+            <sly-field title="Time range to split video">
+              <el-input-number v-model="state.timeStep" :min="5"></el-input-number>
+            </sly-field>
+        </el-tab-pane>
+        <el-tab-pane name="frame">
+            <el-radio slot="label" v-model="state.videoSplitter" label="frame">
+                Frames number
+            </el-radio>
+            <sly-field title="Number of frames in splitted videos">
+              <el-input-number v-model="state.framesStep" :min="2"></el-input-number>
+            </sly-field>
+        </el-tab-pane>
+    </el-tabs>
+</sly-field>

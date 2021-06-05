@@ -13,12 +13,24 @@ TEAM_ID = int(os.environ['context.teamId'])
 WORKSPACE_ID = int(os.environ['context.workspaceId'])
 PROJECT_ID = int(os.environ['modal.state.slyProjectId'])
 #SPLIT_SEC = int(os.environ['modal.state.split_sec'])
-SPLIT_SEC = 4
 TASK_ID = int(os.environ["TASK_ID"])
 
 RESULT_DIR_NAME = 'split_videos'
 new_project_suffix = '_splitted'
 logger = sly.logger
+time_split = 'time'
+
+video_splitter = os.environ['modal.state.videoSplitter']
+
+if video_splitter == time_split:
+   SPLIT_SEC = os.environ['modal.state.timeStep']
+
+else:
+    SPLIT_FRAMES = os.environ['modal.state.framesStep']
+
+logger.warn('SPLIT_SEC {}'.format(SPLIT_SEC))
+logger.warn('SPLIT_FRAMES {}'.format(SPLIT_FRAMES))
+a = 5 / 0
 
 
 def get_splitter(split_sec, video_length):
