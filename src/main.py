@@ -85,6 +85,7 @@ def get_frame_range_tags(frame_range_tags, curr_frame_range, curr_frames_count):
 @my_app.callback("split_video")
 @sly.timeit
 def split_video(api: sly.Api, task_id, context, state, app_logger):
+    global SPLIT_SEC
 
     project = api.project.get_info_by_id(PROJECT_ID)
     meta_json = api.project.get_meta(PROJECT_ID)
