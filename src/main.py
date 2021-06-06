@@ -11,13 +11,14 @@ my_app = sly.AppService()
 TEAM_ID = int(os.environ['context.teamId'])
 WORKSPACE_ID = int(os.environ['context.workspaceId'])
 PROJECT_ID = int(os.environ['modal.state.slyProjectId'])
-#SPLIT_SEC = int(os.environ['modal.state.split_sec'])
+SPLIT_SEC = int(os.environ['modal.state.split_sec'])
 TASK_ID = int(os.environ["TASK_ID"])
 
 RESULT_DIR_NAME = 'split_videos'
 new_project_suffix = '_splitted'
 logger = sly.logger
 time_split = 'time'
+last_frame_ms = 0.001
 
 video_splitter = os.environ['modal.state.videoSplitter']
 
@@ -38,7 +39,7 @@ def get_splitter(split_sec, video_length):
         start_time = end_time
 
     if splitter[-1][-1] < video_length:
-        splitter.append([splitter[-1][-1], video_length])
+        splitter.append([splitter[-1][-1], video_length + last_frame_ms])
 
     return splitter
 
@@ -119,7 +120,6 @@ def split_video(api: sly.Api, task_id, context, state, app_logger):
 
                 if SPLIT_FRAMES:
                     SPLIT_SEC = video_length * SPLIT_FRAMES / video_info.frames_count
-                    logger.warn('SPLIT_FRAMES {}, SPLIT_SEC {}'.format(SPLIT_FRAMES, SPLIT_SEC))
 
                 if SPLIT_SEC >= video_length:
                     logger.warn('SPLIT_SEC is more then video {} length'.format(video_info.name))

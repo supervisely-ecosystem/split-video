@@ -5,15 +5,15 @@
             <el-radio slot="label" v-model="state.videoSplitter" label="time">
                 Time
             </el-radio>
-            <sly-field title="Time range to split video">
+            <sly-field title="Time range for video splitting(seconds)">
               <el-input-number v-model="state.timeStep" :min="1"></el-input-number>
             </sly-field>
         </el-tab-pane>
         <el-tab-pane name="frame">
             <el-radio slot="label" v-model="state.videoSplitter" label="frame">
-                Frames count
+                Frames
             </el-radio>
-            <sly-field title="Number of frames in splitted videos">
+            <sly-field title="Number of frames in split videos">
               <el-input-number v-model="state.framesStep" :min="1"></el-input-number>
             </sly-field>
         </el-tab-pane>
