@@ -23,10 +23,10 @@ last_frame_ms = 0.001
 video_splitter = os.environ['modal.state.videoSplitter']
 
 if video_splitter == time_split:
-    SPLIT_SEC = int(os.environ['modal.state.timeStep'])
-    SPLIT_FRAMES = None
+   SPLIT_SEC = int(os.environ['modal.state.timeStep'])
+   SPLIT_FRAMES = None
 else:
-    SPLIT_FRAMES = int(os.environ['modal.state.framesStep'])
+   SPLIT_FRAMES = int(os.environ['modal.state.framesStep'])
 
 
 def get_splitter(split_sec, video_length):
@@ -119,7 +119,7 @@ def split_video(api: sly.Api, task_id, context, state, app_logger):
                 video_length = video_info.frames_to_timecodes[-1]
 
                 if SPLIT_FRAMES:
-                    SPLIT_SEC = video_length * SPLIT_FRAMES / video_info.frames_count
+                    SPLIT_SEC = round(video_length * SPLIT_FRAMES / video_info.frames_count)
 
                 if SPLIT_SEC >= video_length:
                     logger.warn('SPLIT_SEC is more then video {} length'.format(video_info.name))
