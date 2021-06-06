@@ -27,19 +27,35 @@ if video_splitter == time_split:
    SPLIT_FRAMES = None
 else:
    SPLIT_FRAMES = int(os.environ['modal.state.framesStep'])
+   SPLIT_SEC = None
 
 
-def get_splitter(split_sec, video_length):
+def get_time_splitter(split_sec, video_length):
     splitter = []
     full_parts = int(video_length // split_sec)
     start_time = 0
     for i in range(full_parts):
-        end_time = split_sec * (i+1)
+        end_time = round(split_sec * (i+1), 1)
         splitter.append([start_time, end_time])
         start_time = end_time
 
     if splitter[-1][-1] < video_length:
         splitter.append([splitter[-1][-1], video_length + last_frame_ms])
+
+    return splitter
+
+
+def get_frames_splitter(split_frames, frames_to_timecodes):
+    splitter = []
+    start_time = 0
+    full_parts = int(len(frames_to_timecodes) // split_frames)
+    for i in range(full_parts):
+        end_time = frames_to_timecodes[split_frames * (i+1)] - last_frame_ms
+        splitter.append([start_time, end_time])
+        start_time = frames_to_timecodes[split_frames * (i+1)]
+
+    if splitter[-1][-1] < frames_to_timecodes[-1]:
+        splitter.append([splitter[-1][-1] + last_frame_ms, frames_to_timecodes[-1] + last_frame_ms])
 
     return splitter
 
@@ -119,15 +135,20 @@ def split_video(api: sly.Api, task_id, context, state, app_logger):
                 video_length = video_info.frames_to_timecodes[-1]
 
                 if SPLIT_FRAMES:
-                    SPLIT_SEC = round(video_length * SPLIT_FRAMES / video_info.frames_count)
+                    if SPLIT_FRAMES > len(video_info.frames_to_timecodes):
+                        logger.warn('Frames count is more then video {} length'.format(video_info.name))
+                        new_video_info = api.video.upload_hash(ds.id, video_info.name, video_info.hash)
+                        api.video.annotation.append(new_video_info.id, ann, key_id_map)
+                        continue
+                    splitter = get_frames_splitter(SPLIT_FRAMES, video_info.frames_to_timecodes)
 
-                if SPLIT_SEC >= video_length:
-                    logger.warn('SPLIT_SEC is more then video {} length'.format(video_info.name))
-                    new_video_info = api.video.upload_hash(ds.id, video_info.name, video_info.hash)
-                    api.video.annotation.append(new_video_info.id, ann, key_id_map)
-                    continue
-
-                splitter = get_splitter(SPLIT_SEC, video_length)
+                if SPLIT_SEC:
+                    if SPLIT_SEC >= video_length:
+                        logger.warn('Split time or frames count is more then video {} length'.format(video_info.name))
+                        new_video_info = api.video.upload_hash(ds.id, video_info.name, video_info.hash)
+                        api.video.annotation.append(new_video_info.id, ann, key_id_map)
+                        continue
+                    splitter = get_time_splitter(SPLIT_SEC, video_length)
 
                 input_video_path = os.path.join(RESULT_DIR, video_info.name)
                 api.video.download_path(video_info.id, input_video_path)
