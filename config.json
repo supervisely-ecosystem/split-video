@@ -1,10 +1,10 @@
 {
-  "name": "Split video",
+  "name": "Split videos",
   "type": "app",
   "categories": [
     "Videos"
   ],
-  "description": "Split video",
+  "description": "Split videos",
   "docker_image": "supervisely/base-py-sdk:6",
   "main_script": "src/main.py",
   "modal_template": "src/modal.html",
