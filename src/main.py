@@ -19,7 +19,7 @@ logger = sly.logger
 time_split = 'time'
 last_frame_ms = 0.001
 
-video_splitter = int(os.environ['modal.state.videoSplitter'])
+video_splitter = os.environ['modal.state.videoSplitter']
 
 if video_splitter == time_split:
    SPLIT_SEC = int(os.environ['modal.state.timeStep'])
