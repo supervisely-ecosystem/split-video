@@ -1,7 +1,8 @@
 
 
 <div align="center" markdown>
-<img src="https://i.imgur.com/vrUAvVp.png"/>
+<img src="https://i.imgur.com/vYGZLho.png"/>
+
 
 
 
@@ -25,14 +26,14 @@
 
 ## Overview
 
-App splits the `videos` in a project or dataset by a specified `time` in seconds or number of `frames`.
+Application splits the `videos` in a project or dataset by specified `time` in seconds or number of `frames`.
 
 
 
 ## How To Run 
 **Step 1**: Add app to your team from [Ecosystem](https://ecosystem.supervise.ly/apps/import-mot-format) if it is not there.
 
-**Step 2**: Open context menu of project -> `Download via App` -> `Split videos` 
+**Step 2**: Open context menu of project -> `Run App` -> `Split videos` 
 
 <img src="https://i.imgur.com/CnlKoDX.png"/>
 
