@@ -11,9 +11,8 @@ my_app = sly.AppService()
 TEAM_ID = int(os.environ['context.teamId'])
 WORKSPACE_ID = int(os.environ['context.workspaceId'])
 PROJECT_ID = int(os.environ['modal.state.slyProjectId'])
-TASK_ID = int(os.environ["TASK_ID"])
 
-RESULT_DIR_NAME = 'split_videos'
+result_dir_name = 'split_videos'
 new_project_suffix = '_splitted'
 logger = sly.logger
 time_split = 'time'
@@ -22,11 +21,11 @@ last_frame_ms = 0.001
 video_splitter = os.environ['modal.state.videoSplitter']
 
 if video_splitter == time_split:
-   SPLIT_SEC = int(os.environ['modal.state.timeStep'])
-   SPLIT_FRAMES = None
+   split_sec = int(os.environ['modal.state.timeStep'])
+   split_frames = None
 else:
-   SPLIT_FRAMES = int(os.environ['modal.state.framesStep'])
-   SPLIT_SEC = None
+   split_frames = int(os.environ['modal.state.framesStep'])
+   split_sec = None
 
 
 def get_time_splitter(split_sec, video_length):
@@ -86,11 +85,14 @@ def get_frame_range_tags(frame_range_tags, curr_frame_range, curr_frames_count):
         if fr_range[0] <= curr_frame_range[0] and fr_range[1] >= curr_frame_range[1]:
             result_tags.append(tag.clone(frame_range=[0, curr_frames_count], key=tag.key()))
         elif fr_range[0] >= curr_frame_range[0] and fr_range[1] <= curr_frame_range[1]:
-            result_tags.append(tag.clone(frame_range=[tag.frame_range[0] - curr_frame_range[0], tag.frame_range[1] - curr_frame_range[0]], key=tag.key()))
+            result_tags.append(tag.clone(
+                frame_range=[tag.frame_range[0] - curr_frame_range[0], tag.frame_range[1] - curr_frame_range[0]],
+                key=tag.key()))
         elif fr_range[0] <= curr_frame_range[0] and fr_range[1] <= curr_frame_range[1]:
             result_tags.append(tag.clone(frame_range=[0, tag.frame_range[1] - curr_frame_range[0]], key=tag.key()))
         elif fr_range[0] >= curr_frame_range[0] and fr_range[1] >= curr_frame_range[1]:
-            result_tags.append(tag.clone(frame_range=[tag.frame_range[0] - curr_frame_range[0], curr_frames_count], key=tag.key()))
+            result_tags.append(
+                tag.clone(frame_range=[tag.frame_range[0] - curr_frame_range[0], curr_frames_count], key=tag.key()))
 
     return result_tags
 
@@ -98,31 +100,27 @@ def get_frame_range_tags(frame_range_tags, curr_frame_range, curr_frames_count):
 @my_app.callback("split_video")
 @sly.timeit
 def split_video(api: sly.Api, task_id, context, state, app_logger):
-    global SPLIT_SEC
+    global split_sec
 
     project = api.project.get_info_by_id(PROJECT_ID)
     meta_json = api.project.get_meta(PROJECT_ID)
     meta = sly.ProjectMeta.from_json(meta_json)
-    if project is None:
-        raise RuntimeError("Project with ID {!r} not found".format(PROJECT_ID))
-    if project.type != str(sly.ProjectType.VIDEOS):
-        raise TypeError("Project type is {!r}, but have to be {!r}".format(project.type, sly.ProjectType.VIDEOS))
-
     project_name = project.name
     splitted_project_name = project_name + new_project_suffix
-    new_project = api.project.create(WORKSPACE_ID, splitted_project_name, type=sly.ProjectType.VIDEOS, change_name_if_conflict=True)
+    new_project = api.project.create(WORKSPACE_ID, splitted_project_name, type=sly.ProjectType.VIDEOS,
+                                     change_name_if_conflict=True)
     api.project.update_meta(new_project.id, meta.to_json())
     meta_json = api.project.get_meta(PROJECT_ID)
     meta = sly.ProjectMeta.from_json(meta_json)
 
-    RESULT_DIR = os.path.join(my_app.data_dir, RESULT_DIR_NAME)
+    result_dir = os.path.join(my_app.data_dir, result_dir_name)
     key_id_map = KeyIdMap()
     for dataset in api.dataset.get_list(PROJECT_ID):
         ds = api.dataset.create(new_project.id, dataset.name, change_name_if_conflict=True)
         videos = api.video.get_list(dataset.id)
+        progress = sly.Progress('Video being splitted', len(videos))
         for batch in sly.batched(videos, batch_size=10):
             for video_info in batch:
-                progress = sly.Progress('Video being splitted', len(batch))
                 ann_info = api.video.annotation.download(video_info.id)
                 ann = sly.VideoAnnotation.from_json(ann_info, meta, key_id_map)
 
@@ -137,31 +135,32 @@ def split_video(api: sly.Api, task_id, context, state, app_logger):
                 ann_frames = [frame for frame in ann.frames]
                 video_length = video_info.frames_to_timecodes[-1]
 
-                if SPLIT_FRAMES:
-                    if SPLIT_FRAMES > len(video_info.frames_to_timecodes):
+                if split_frames:
+                    if split_frames > len(video_info.frames_to_timecodes):
                         logger.warn('Frames count is more then video {} length'.format(video_info.name))
                         new_video_info = api.video.upload_hash(ds.id, video_info.name, video_info.hash)
                         api.video.annotation.append(new_video_info.id, ann, key_id_map)
                         continue
-                    splitter = get_frames_splitter(SPLIT_FRAMES, video_info.frames_to_timecodes)
+                    splitter = get_frames_splitter(split_frames, video_info.frames_to_timecodes)
 
-                if SPLIT_SEC:
-                    if SPLIT_SEC >= video_length:
+                if split_sec:
+                    if split_sec >= video_length:
                         logger.warn('Split time or frames count is more then video {} length'.format(video_info.name))
                         new_video_info = api.video.upload_hash(ds.id, video_info.name, video_info.hash)
                         api.video.annotation.append(new_video_info.id, ann, key_id_map)
                         continue
-                    splitter = get_time_splitter(SPLIT_SEC, video_length)
+                    splitter = get_time_splitter(split_sec, video_length)
 
-                input_video_path = os.path.join(RESULT_DIR, video_info.name)
+                input_video_path = os.path.join(result_dir, video_info.name)
                 api.video.download_path(video_info.id, input_video_path)
                 curr_video_paths = []
                 curr_video_names = []
-                for curr_split in splitter:
+                for idx, curr_split in enumerate(splitter):
                     with VideoFileClip(input_video_path) as video:
                         new = video.subclip(curr_split[0], curr_split[1])
-                        split_video_name = sly.fs.get_file_name(video_info.name) + '_' + str(curr_split[1]) + sly.fs.get_file_ext(video_info.name)
-                        output_video_path = os.path.join(RESULT_DIR, split_video_name)
+                        split_video_name = sly.fs.get_file_name(video_info.name) + '_' + str(
+                            idx + 1) + sly.fs.get_file_ext(video_info.name)
+                        output_video_path = os.path.join(result_dir, split_video_name)
                         curr_video_names.append(split_video_name)
                         curr_video_paths.append(output_video_path)
                         new.write_videofile(output_video_path, audio_codec='aac')
@@ -183,7 +182,8 @@ def split_video(api: sly.Api, task_id, context, state, app_logger):
                         range_tags = get_frame_range_tags(frame_range_tags, curr_frame_range, curr_frames_count)
 
                     split_ann_tags.extend(range_tags)
-                    split_ann = ann.clone(frames_count=curr_frames_count, frames=split_frames_coll, tags=VideoTagCollection(split_ann_tags))
+                    split_ann = ann.clone(frames_count=curr_frames_count, frames=split_frames_coll,
+                                          tags=VideoTagCollection(split_ann_tags))
                     api.video.annotation.append(new_video_infos[idx].id, split_ann, key_id_map)
                 progress.iter_done_report()
 
