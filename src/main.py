@@ -11,7 +11,6 @@ my_app = sly.AppService()
 TEAM_ID = int(os.environ['context.teamId'])
 WORKSPACE_ID = int(os.environ['context.workspaceId'])
 PROJECT_ID = int(os.environ['modal.state.slyProjectId'])
-#SPLIT_SEC = int(os.environ['modal.state.split_sec'])
 TASK_ID = int(os.environ["TASK_ID"])
 
 RESULT_DIR_NAME = 'split_videos'
@@ -20,7 +19,7 @@ logger = sly.logger
 time_split = 'time'
 last_frame_ms = 0.001
 
-video_splitter = os.environ['modal.state.videoSplitter']
+video_splitter = int(os.environ['modal.state.videoSplitter'])
 
 if video_splitter == time_split:
    SPLIT_SEC = int(os.environ['modal.state.timeStep'])
@@ -35,12 +34,12 @@ def get_time_splitter(split_sec, video_length):
     full_parts = int(video_length // split_sec)
     start_time = 0
     for i in range(full_parts):
-        end_time = round(split_sec * (i+1), 1)
+        end_time = split_sec * (i+1)
         splitter.append([start_time, end_time])
         start_time = end_time
 
-    if splitter[-1][-1] < video_length:
-        splitter.append([splitter[-1][-1], video_length + last_frame_ms])
+    if end_time < video_length:
+        splitter.append([end_time, video_length + last_frame_ms])
 
     return splitter
 
@@ -48,14 +47,18 @@ def get_time_splitter(split_sec, video_length):
 def get_frames_splitter(split_frames, frames_to_timecodes):
     splitter = []
     start_time = 0
-    full_parts = int(len(frames_to_timecodes) // split_frames)
+    if type(len(frames_to_timecodes) // split_frames) == int:
+        full_parts = int(len(frames_to_timecodes) // (split_frames + 1))
+    else:
+        full_parts = int(len(frames_to_timecodes) // split_frames)
+
     for i in range(full_parts):
         end_time = frames_to_timecodes[split_frames * (i+1)] - last_frame_ms
         splitter.append([start_time, end_time])
         start_time = frames_to_timecodes[split_frames * (i+1)]
 
-    if splitter[-1][-1] < frames_to_timecodes[-1]:
-        splitter.append([splitter[-1][-1] + last_frame_ms, frames_to_timecodes[-1] + last_frame_ms])
+    if end_time < frames_to_timecodes[-1]:
+        splitter.append([end_time + last_frame_ms, frames_to_timecodes[-1] + last_frame_ms])
 
     return splitter
 
