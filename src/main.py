@@ -137,7 +137,7 @@ def split_video(api: sly.Api, task_id, context, state, app_logger):
 
                 if split_frames:
                     if split_frames > len(video_info.frames_to_timecodes):
-                        logger.warn('Frames count is more then video {} length'.format(video_info.name))
+                        logger.warn('Frames count, set for splitting, is more then video {} length'.format(video_info.name))
                         new_video_info = api.video.upload_hash(ds.id, video_info.name, video_info.hash)
                         api.video.annotation.append(new_video_info.id, ann, key_id_map)
                         continue
@@ -145,7 +145,7 @@ def split_video(api: sly.Api, task_id, context, state, app_logger):
 
                 if split_sec:
                     if split_sec >= video_length:
-                        logger.warn('Split time or frames count is more then video {} length'.format(video_info.name))
+                        logger.warn('Time, set for splitting, is more then video {} length'.format(video_info.name))
                         new_video_info = api.video.upload_hash(ds.id, video_info.name, video_info.hash)
                         api.video.annotation.append(new_video_info.id, ann, key_id_map)
                         continue

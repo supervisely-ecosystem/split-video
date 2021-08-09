@@ -26,12 +26,12 @@
 
 ## Overview
 
-Application splits the `videos` in a project or dataset by specified `time` in seconds or number of `frames`.
+Application splits `videos` in [Supervisely](https://app.supervise.ly) project or dataset by specified `time` in seconds or specified number of `frames`. Result videos will have names like original videos with `_index` suffix, where `index`  - the sequence number of the video received in the process of splitting. If video length is less, then specified splitter(`time` or `frames` number), it will be add to result project without changes.
 
 
 
 ## How To Run 
-**Step 1**: Add app to your team from [Ecosystem](https://ecosystem.supervise.ly/apps/import-mot-format) if it is not there.
+**Step 1**: Add app to your team from [Ecosystem](https://ecosystem.supervise.ly/apps/split_video) if it is not there.
 
 **Step 2**: Open context menu of project -> `Run App` -> `Split videos` 
 
