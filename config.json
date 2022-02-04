@@ -10,7 +10,7 @@
   "modal_template": "src/modal.html",
   "modal_template_state": {"videoSplitter":  "time"},
   "task_location": "workspace_tasks",
-  "icon": "https://i.imgur.com/BYyFUkE.png",
+  "icon": "https://i.imgur.com/L25Giwq.png",
   "icon_background": "#FFFFFF",
   "isolate": true,
   "headless": true,
