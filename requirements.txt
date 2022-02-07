@@ -1,2 +1,2 @@
-supervisely==6.1.80
+supervisely==6.7.0
 moviepy
