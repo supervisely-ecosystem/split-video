@@ -32,7 +32,7 @@ else:
 def get_time_splitter(split_sec, video_length):
     splitter = []
     full_parts = int(video_length // split_sec)
-    if video_length - (full_parts * split_sec) < 1:          # check the case last split less then 1 sec
+    if video_length - (full_parts * split_sec) < 1 and split_sec == 1: # check the case split_sec=1 (last split less 1 sec)
         full_parts -= 1
 
     for i in range(full_parts):
@@ -46,7 +46,7 @@ def get_time_splitter(split_sec, video_length):
 def get_frames_splitter(split_frames, frames_to_timecodes):
     splitter = []
     full_parts = int(len(frames_to_timecodes) // split_frames)
-    if full_parts == len(frames_to_timecodes):                  # check the case of splitting into 1 frame
+    if full_parts == len(frames_to_timecodes):                 # check the case of splitting into 1 frame
         full_parts -= 1
 
     for i in range(full_parts):
@@ -71,12 +71,10 @@ def get_new_frames(old_frames):
     return split_frames
 
 
-def get_frame_range_tags(frame_range_tags, curr_frame_range, curr_frames_count):
+def get_frame_range_tags(frame_range_tags, curr_frame_range):
     result_tags = []
     curr_fr_range = list(range(curr_frame_range[0], curr_frame_range[1]))
     for tag in frame_range_tags:
-        # fr_range = tag.frame_range
-
         fr_range = list(range(tag.frame_range[0], tag.frame_range[1] + 1))
         res = list(set(fr_range) & set(curr_fr_range))
         if len(res) == 0:
@@ -84,22 +82,64 @@ def get_frame_range_tags(frame_range_tags, curr_frame_range, curr_frames_count):
 
         result_tags.append(tag.clone(frame_range=[min(res) - curr_frame_range[0], max(res) - curr_frame_range[0]], key=tag.key()))
 
-
-        # if fr_range[1] < curr_frame_range[0] or fr_range[0] > curr_frame_range[1]:
-        #     continue
-        # if fr_range[0] <= curr_frame_range[0] and fr_range[1] >= curr_frame_range[1]:
-        #     result_tags.append(tag.clone(frame_range=[0, curr_frames_count], key=tag.key()))
-        # elif fr_range[0] >= curr_frame_range[0] and fr_range[1] <= curr_frame_range[1]:
-        #     result_tags.append(tag.clone(
-        #         frame_range=[tag.frame_range[0] - curr_frame_range[0], tag.frame_range[1] - curr_frame_range[0]],
-        #         key=tag.key()))
-        # elif fr_range[0] <= curr_frame_range[0] and fr_range[1] <= curr_frame_range[1]:
-        #     result_tags.append(tag.clone(frame_range=[0, tag.frame_range[1] - curr_frame_range[0]], key=tag.key()))
-        # elif fr_range[0] >= curr_frame_range[0] and fr_range[1] >= curr_frame_range[1]:
-        #     result_tags.append(
-        #         tag.clone(frame_range=[tag.frame_range[0] - curr_frame_range[0], curr_frames_count], key=tag.key()))
-
     return result_tags
+
+
+def upload_full_video(api, ds_id, video_info, ann, progress):
+    key_id_map = KeyIdMap()
+    new_video_info = api.video.upload_hash(ds_id, video_info.name, video_info.hash)
+    api.video.annotation.append(new_video_info.id, ann, key_id_map)
+    progress.iter_done_report()
+
+
+def write_videos(api, splitter, result_dir, video_info):
+    input_video_path = os.path.join(result_dir, video_info.name)
+    api.video.download_path(video_info.id, input_video_path)
+    curr_video_paths = []
+    curr_video_names = []
+    for idx, curr_split in enumerate(splitter):
+        with VideoFileClip(input_video_path) as video:
+            new = video.subclip(curr_split[0], curr_split[1])
+            split_video_name = sly.fs.get_file_name(video_info.name) + '_' + str(
+                idx + 1) + sly.fs.get_file_ext(video_info.name)
+            output_video_path = os.path.join(result_dir, split_video_name)
+            curr_video_names.append(split_video_name)
+            curr_video_paths.append(output_video_path)
+            new.write_videofile(output_video_path, audio_codec='aac')
+
+    return curr_video_paths, curr_video_names
+
+
+def upload_new_anns(api, new_video_infos, ann):
+    video_tags = []
+    frame_range_tags = []
+    for tag in ann.tags:
+        if tag.frame_range is None:
+            video_tags.append(tag)
+        else:
+            frame_range_tags.append(tag)
+
+    key_id_map = KeyIdMap()
+    ann_frames = [frame for frame in ann.frames]
+    start_frames_count = new_video_infos[0].frames_count
+    for idx in range(len(new_video_infos)):
+        curr_frames_count = new_video_infos[idx].frames_count
+
+        curr_frame_range = [start_frames_count * idx, start_frames_count * (idx + 1)]
+        split_ann_tags = deepcopy(video_tags)
+
+        if start_frames_count * (idx + 1) > len(ann.frames):
+            old_frames = ann_frames[start_frames_count * idx: len(ann.frames)]
+        else:
+            old_frames = ann_frames[start_frames_count * idx: curr_frames_count * (idx + 1)]
+
+        split_frames_coll = get_new_frames(old_frames)
+        range_tags = get_frame_range_tags(frame_range_tags, curr_frame_range)
+
+        split_ann_tags.extend(range_tags)
+        split_ann = ann.clone(frames_count=curr_frames_count, frames=split_frames_coll,
+                              tags=VideoTagCollection(split_ann_tags))
+        api.video.annotation.append(new_video_infos[idx].id, split_ann, key_id_map)
 
 
 @my_app.callback("split_video")
@@ -127,70 +167,25 @@ def split_video(api: sly.Api, task_id, context, state, app_logger):
         for video_info in videos:
             ann_info = api.video.annotation.download(video_info.id)
             ann = sly.VideoAnnotation.from_json(ann_info, meta, key_id_map)
-
-            video_tags = []
-            frame_range_tags = []
-            for tag in ann.tags:
-                if tag.frame_range is None:
-                    video_tags.append(tag)
-                else:
-                    frame_range_tags.append(tag)
-
-            ann_frames = [frame for frame in ann.frames]
             video_length = video_info.frames_to_timecodes[-1]
 
             if split_frames:
                 if split_frames >= len(video_info.frames_to_timecodes):
                     logger.warn('Frames count, set for splitting, is more then video {} length'.format(video_info.name))
-                    new_video_info = api.video.upload_hash(ds.id, video_info.name, video_info.hash)
-                    api.video.annotation.append(new_video_info.id, ann, key_id_map)
-                    progress.iter_done_report()
+                    upload_full_video(api, ds.id, video_info, ann, progress)
                     continue
                 splitter = get_frames_splitter(split_frames, video_info.frames_to_timecodes)
 
             if split_sec:
                 if split_sec >= round(video_length):
                     logger.warn('Time, set for splitting, is more then video {} length'.format(video_info.name))
-                    new_video_info = api.video.upload_hash(ds.id, video_info.name, video_info.hash)
-                    api.video.annotation.append(new_video_info.id, ann, key_id_map)
-                    progress.iter_done_report()
+                    upload_full_video(api, ds.id, video_info, ann, progress)
                     continue
                 splitter = get_time_splitter(split_sec, video_length)
 
-            input_video_path = os.path.join(result_dir, video_info.name)
-            api.video.download_path(video_info.id, input_video_path)
-            curr_video_paths = []
-            curr_video_names = []
-            for idx, curr_split in enumerate(splitter):
-                with VideoFileClip(input_video_path) as video:
-                    new = video.subclip(curr_split[0], curr_split[1])
-                    split_video_name = sly.fs.get_file_name(video_info.name) + '_' + str(
-                        idx + 1) + sly.fs.get_file_ext(video_info.name)
-                    output_video_path = os.path.join(result_dir, split_video_name)
-                    curr_video_names.append(split_video_name)
-                    curr_video_paths.append(output_video_path)
-                    new.write_videofile(output_video_path, audio_codec='aac')
+            curr_video_paths, curr_video_names = write_videos(api, splitter, result_dir, video_info)
             new_video_infos = api.video.upload_paths(ds.id, curr_video_names, curr_video_paths)
-            start_frames_count = new_video_infos[0].frames_count
-            for idx in range(len(new_video_infos)):
-                curr_frames_count = new_video_infos[idx].frames_count
-
-                curr_frame_range = [start_frames_count * idx, start_frames_count * (idx + 1)]
-                split_ann_tags = deepcopy(video_tags)
-
-                if start_frames_count * (idx + 1) > len(ann.frames):
-                    old_frames = ann_frames[start_frames_count * idx: len(ann.frames)]
-                    split_frames_coll = get_new_frames(old_frames)
-                    range_tags = get_frame_range_tags(frame_range_tags, curr_frame_range, curr_frames_count)
-                else:
-                    old_frames = ann_frames[start_frames_count * idx: curr_frames_count * (idx + 1)]
-                    split_frames_coll = get_new_frames(old_frames)
-                    range_tags = get_frame_range_tags(frame_range_tags, curr_frame_range, curr_frames_count)
-
-                split_ann_tags.extend(range_tags)
-                split_ann = ann.clone(frames_count=curr_frames_count, frames=split_frames_coll,
-                                      tags=VideoTagCollection(split_ann_tags))
-                api.video.annotation.append(new_video_infos[idx].id, split_ann, key_id_map)
+            upload_new_anns(api, new_video_infos, ann)
             progress.iter_done_report()
 
     my_app.stop()
