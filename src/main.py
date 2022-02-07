@@ -32,8 +32,8 @@ else:
 def get_time_splitter(split_sec, video_length):
     splitter = []
     full_parts = int(video_length // split_sec)
-    if video_length - (full_parts * split_sec) < 1 and split_sec == 1: # check the case split_sec=1 (last split less 1 sec)
-        full_parts -= 1
+    # if video_length - (full_parts * split_sec) < 1 and split_sec == 1: # check the case split_sec=1 (last split less 1 sec)
+    #     full_parts -= 1
 
     for i in range(full_parts):
         splitter.append([split_sec * i, split_sec * (i+1)])
@@ -52,7 +52,7 @@ def get_frames_splitter(split_frames, frames_to_timecodes):
     for i in range(full_parts):
         splitter.append([frames_to_timecodes[split_frames * i], frames_to_timecodes[split_frames * (i+1)] - last_frame_ms])
 
-    splitter.append([frames_to_timecodes[split_frames * (i+1)] + last_frame_ms, frames_to_timecodes[-1] + last_frame_ms])
+    splitter.append([frames_to_timecodes[split_frames * (i+1)] - last_frame_ms, frames_to_timecodes[-1] + last_frame_ms])
 
     return splitter
 
