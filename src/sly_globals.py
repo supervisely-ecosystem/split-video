@@ -7,9 +7,9 @@ from supervisely.video_annotation.key_id_map import KeyIdMap
 my_app = sly.AppService()
 api: sly.Api = my_app.public_api
 
-# shutil.rmtree(my_app.data_dir, ignore_errors=True)
+shutil.rmtree(my_app.data_dir, ignore_errors=True)
 
-TASK_ID = int(os.environ["TASK_ID"])
+# TASK_ID = int(os.environ["TASK_ID"])
 TEAM_ID = int(os.environ['context.teamId'])
 WORKSPACE_ID = int(os.environ['context.workspaceId'])
 PROJECT_ID = int(os.environ['modal.state.slyProjectId'])
