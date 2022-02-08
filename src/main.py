@@ -1,32 +1,10 @@
 
 from moviepy.video.io.VideoFileClip import VideoFileClip
 import os
-import supervisely_lib as sly
-from supervisely.video_annotation.key_id_map import KeyIdMap
+import supervisely as sly
 from copy import deepcopy
 from supervisely.video_annotation.video_tag_collection import VideoTagCollection
-
-my_app = sly.AppService()
-
-TASK_ID = int(os.environ["TASK_ID"])
-TEAM_ID = int(os.environ['context.teamId'])
-WORKSPACE_ID = int(os.environ['context.workspaceId'])
-PROJECT_ID = int(os.environ['modal.state.slyProjectId'])
-
-result_dir_name = 'split_videos'
-new_project_suffix = '_splitted'
-logger = sly.logger
-time_split = 'time'
-last_frame_ms = 0.001
-
-video_splitter = os.environ['modal.state.videoSplitter']
-
-if video_splitter == time_split:
-   split_sec = int(os.environ['modal.state.timeStep'])
-   split_frames = None
-else:
-   split_frames = int(os.environ['modal.state.framesStep'])
-   split_sec = None
+import sly_globals as g
 
 
 def get_time_splitter(split_sec, video_length):
@@ -35,21 +13,21 @@ def get_time_splitter(split_sec, video_length):
     for i in range(full_parts):
         splitter.append([split_sec * i, split_sec * (i+1)])
 
-    splitter.append([split_sec * (i+1), video_length + last_frame_ms])
+    splitter.append([split_sec * (i+1), video_length + g.last_frame_ms])
 
     return splitter
 
 
-def get_frames_splitter(split_frames, frames_to_timecodes):
+def get_frames_splitter(split_frames, fr_to_timecodes):
     splitter = []
-    full_parts = int(len(frames_to_timecodes) // split_frames)
-    if full_parts == len(frames_to_timecodes):                 # check the case of splitting into 1 frame
+    full_parts = int(len(fr_to_timecodes) // split_frames)
+    if full_parts == len(fr_to_timecodes):                 # check the case of splitting into 1 frame
         full_parts -= 1
 
     for i in range(full_parts):
-        splitter.append([frames_to_timecodes[split_frames * i], frames_to_timecodes[split_frames * (i+1)] - last_frame_ms])
+        splitter.append([fr_to_timecodes[split_frames * i], fr_to_timecodes[split_frames * (i+1)] - g.last_frame_ms])
 
-    splitter.append([frames_to_timecodes[split_frames * (i+1)] - last_frame_ms, frames_to_timecodes[-1] + last_frame_ms])
+    splitter.append([fr_to_timecodes[split_frames * (i+1)] - g.last_frame_ms, fr_to_timecodes[-1] + g.last_frame_ms])
 
     return splitter
 
@@ -83,9 +61,8 @@ def get_frame_range_tags(frame_range_tags, curr_frame_range):
 
 
 def upload_full_video(api, ds_id, video_info, ann, progress):
-    key_id_map = KeyIdMap()
     new_video_info = api.video.upload_hash(ds_id, video_info.name, video_info.hash)
-    api.video.annotation.append(new_video_info.id, ann, key_id_map)
+    api.video.annotation.append(new_video_info.id, ann, g.key_id_map)
     progress.iter_done_report()
 
 
@@ -107,7 +84,7 @@ def write_videos(api, splitter, result_dir, video_info):
     return curr_video_paths, curr_video_names
 
 
-def upload_new_anns(api, new_video_infos, ann):
+def get_ann_tags(ann):
     video_tags = []
     frame_range_tags = []
     for tag in ann.tags:
@@ -116,8 +93,12 @@ def upload_new_anns(api, new_video_infos, ann):
         else:
             frame_range_tags.append(tag)
 
-    key_id_map = KeyIdMap()
-    ann_frames = [frame for frame in ann.frames]
+    return video_tags, frame_range_tags
+
+def upload_new_anns(api, new_video_infos, ann):
+
+    video_tags, frame_range_tags = get_ann_tags(ann)
+    ann_frames = ann.frames.items()
     start_frames_count = new_video_infos[0].frames_count
     for idx in range(len(new_video_infos)):
         curr_frames_count = new_video_infos[idx].frames_count
@@ -136,65 +117,62 @@ def upload_new_anns(api, new_video_infos, ann):
         split_ann_tags.extend(range_tags)
         split_ann = ann.clone(frames_count=curr_frames_count, frames=split_frames_coll,
                               tags=VideoTagCollection(split_ann_tags))
-        api.video.annotation.append(new_video_infos[idx].id, split_ann, key_id_map)
+        api.video.annotation.append(new_video_infos[idx].id, split_ann, g.key_id_map)
 
 
-@my_app.callback("split_video")
+@g.my_app.callback("split_video")
 @sly.timeit
 def split_video(api: sly.Api, task_id, context, state, app_logger):
-    global split_sec
 
-    project = api.project.get_info_by_id(PROJECT_ID)
-    meta_json = api.project.get_meta(PROJECT_ID)
+    project = api.project.get_info_by_id(g.PROJECT_ID)
+    meta_json = api.project.get_meta(g.PROJECT_ID)
     meta = sly.ProjectMeta.from_json(meta_json)
-    project_name = project.name
-    splitted_project_name = project_name + new_project_suffix
-    new_project = api.project.create(WORKSPACE_ID, splitted_project_name, type=sly.ProjectType.VIDEOS,
+    splitted_project_name = project.name + g.new_project_suffix
+    new_project = api.project.create(g.WORKSPACE_ID, splitted_project_name, type=sly.ProjectType.VIDEOS,
                                       change_name_if_conflict=True)
     api.project.update_meta(new_project.id, meta.to_json())
-    meta_json = api.project.get_meta(PROJECT_ID)
+    meta_json = api.project.get_meta(g.PROJECT_ID)
     meta = sly.ProjectMeta.from_json(meta_json)
 
-    result_dir = os.path.join(my_app.data_dir, result_dir_name)
-    key_id_map = KeyIdMap()
-    for dataset in api.dataset.get_list(PROJECT_ID):
+    result_dir = os.path.join(g.my_app.data_dir, g.result_dir_name)
+    for dataset in api.dataset.get_list(g.PROJECT_ID):
         ds = api.dataset.create(new_project.id, dataset.name, change_name_if_conflict=True)
         videos = api.video.get_list(dataset.id)
         progress = sly.Progress('Video being splitted', len(videos))
         for video_info in videos:
             ann_info = api.video.annotation.download(video_info.id)
-            ann = sly.VideoAnnotation.from_json(ann_info, meta, key_id_map)
+            ann = sly.VideoAnnotation.from_json(ann_info, meta, g.key_id_map)
             video_length = video_info.frames_to_timecodes[-1]
 
-            if split_frames:
-                if split_frames >= len(video_info.frames_to_timecodes):
-                    logger.warn('Frames count, set for splitting, is more then video {} length'.format(video_info.name))
+            if g.split_frames:
+                if g.split_frames >= len(video_info.frames_to_timecodes):
+                    g.logger.warn('Frames count, set for splitting, is more then video {} length'.format(video_info.name))
                     upload_full_video(api, ds.id, video_info, ann, progress)
                     continue
-                splitter = get_frames_splitter(split_frames, video_info.frames_to_timecodes)
+                splitter = get_frames_splitter(g.split_frames, video_info.frames_to_timecodes)
 
-            if split_sec:
-                if split_sec >= round(video_length):
-                    logger.warn('Time, set for splitting, is more then video {} length'.format(video_info.name))
+            if g.split_sec:
+                if g.split_sec >= round(video_length):
+                    g.logger.warn('Time, set for splitting, is more then video {} length'.format(video_info.name))
                     upload_full_video(api, ds.id, video_info, ann, progress)
                     continue
-                splitter = get_time_splitter(split_sec, video_length)
+                splitter = get_time_splitter(g.split_sec, video_length)
 
             curr_video_paths, curr_video_names = write_videos(api, splitter, result_dir, video_info)
             new_video_infos = api.video.upload_paths(ds.id, curr_video_names, curr_video_paths)
             upload_new_anns(api, new_video_infos, ann)
             progress.iter_done_report()
 
-    my_app.stop()
+    g.my_app.stop()
 
 
 def main():
     sly.logger.info("Script arguments", extra={
-        "TEAM_ID": TEAM_ID,
-        "WORKSPACE_ID": WORKSPACE_ID,
-        "modal.state.slyProjectId": PROJECT_ID
+        "TEAM_ID": g.TEAM_ID,
+        "WORKSPACE_ID": g.WORKSPACE_ID,
+        "modal.state.slyProjectId": g.PROJECT_ID
     })
-    my_app.run(initial_events=[{"command": "split_video"}])
+    g.my_app.run(initial_events=[{"command": "split_video"}])
 
 
 if __name__ == '__main__':
