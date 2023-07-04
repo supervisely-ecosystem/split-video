@@ -1,7 +1,7 @@
 
 
 <div align="center" markdown>
-<img src="https://i.imgur.com/vYGZLho.png"/>
+<img src="media/poster.png"/>
 
 
 
@@ -34,17 +34,17 @@ Application splits `videos` in [Supervisely](https://app.supervise.ly) project o
 
 **Step 2**: Open context menu of project -> `Run App` -> `Split videos` 
 
-<img src="https://i.imgur.com/CnlKoDX.png"/>
+<img src="media/htr2.png"/>
 
 **Step 3**: Сhoose a way to split the video - by `time` in seconds or number of `frames`.
 
 Split videos by `time` in seconds.
 
-<img src="https://i.imgur.com/t6tCy2Z.png" width="600px"/>
+<img src="media/htr3.png" width="600px"/>
 
 Split videos by number of `frames`.
 
-<img src="https://i.imgur.com/bgjbjhJ.png" width="600px"/>
+<img src="media/htr3a.png" width="600px"/>
 
 Press `RUN`button.
 
@@ -54,4 +54,4 @@ Press `RUN`button.
 
 Result project will be saved in your current `Workspace` with `_splitted` suffix.
 
-<img src="https://i.imgur.com/LhBStdT.png"/>
+<img src="media/htu1.png"/>
