@@ -14,7 +14,7 @@
     "videoSplitter": "time"
   },
   "task_location": "workspace_tasks",
-  "icon": "https://i.imgur.com/L25Giwq.png",
+  "icon": "media/icon.png",
   "icon_background": "#FFFFFF",
   "isolate": true,
   "headless": true,
@@ -24,5 +24,5 @@
       "videos_dataset"
     ]
   },
-  "poster": "https://i.imgur.com/vYGZLho.png"
+  "poster": "media/poster.png"
 }
