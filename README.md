@@ -30,7 +30,7 @@ Application splits `videos` in [Supervisely](https://app.supervisely.com) projec
 
 
 ## How To Run 
-**Step 1**: Add app to your team from [Ecosystem](https://ecosystem.supervisely.com/apps/split_video) if it is not there.
+**Step 1**: Add app to your team from [Ecosystem](../../../../supervisely-ecosystem/split_video) if it is not there.
 
 **Step 2**: Open context menu of project -> `Run App` -> `Split videos` 
 
